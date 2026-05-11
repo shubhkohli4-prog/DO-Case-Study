@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saas-app
+  namespace: saas-app
+  labels:
+    app: saas-app
+    version: "1.0"
+spec:
+  replicas: 2                         # Start with 2 pods for HA
+  selector:
+    matchLabels:
+      app: saas-app
+  strategy:
+    type: RollingUpdate               # Zero-downtime deployments
+    rollingUpdate:
+      maxSurge: 1                     # Max 1 extra pod during update
+      maxUnavailable: 0               # Never go below desired replicas
+  template:
+    metadata:
+      labels:
+        app: saas-app
+        version: "1.0"
+    spec:
+      # Spread pods across nodes for HA
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: saas-app
+
+      containers:
+        - name: saas-app
+          image: registry.digitalocean.com/do-case-study/saas-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+
+          # Resource requests and limits — critical for HPA to work
+          resources:
+            requests:
+              cpu: "100m"             # 0.1 CPU core (HPA bases decisions on this)
+              memory: "128Mi"
+            limits:
+              cpu: "500m"             # Max 0.5 CPU core
+              memory: "256Mi"
+
+          # Environment variables
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NODE_ENV
+              value: "production"
+
+          # Liveness probe: restart container if unhealthy
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          # Readiness probe: only send traffic when ready
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          # Security context
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+
+      # Pull image from DigitalOcean Container Registry
+      imagePullSecrets:
+        - name: do-case-study
+

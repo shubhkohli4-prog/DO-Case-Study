@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: saas-app-pdb
+  namespace: saas-app
+spec:
+  minAvailable: 1                     # Always keep at least 1 pod alive during node upgrades
+  selector:
+    matchLabels:
+      app: saas-app
+

@@ -1,0 +1,49 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: saas-app-hpa
+  namespace: saas-app
+  labels:
+    app: saas-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: saas-app
+
+  # Pod count boundaries
+  minReplicas: 2                      # Always keep 2 pods running (HA)
+  maxReplicas: 10                     # Cap at 10 to control cost
+
+  metrics:
+    # Scale on CPU utilisation (primary metric)
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50      # Scale up when avg CPU > 50%
+
+    # Scale on memory utilisation (secondary metric)
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70      # Scale up when avg memory > 70%
+
+  # Scaling behaviour — prevent thrashing
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30  # Wait 30s before scaling up again
+      policies:
+        - type: Pods
+          value: 2                    # Add max 2 pods at a time
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300 # Wait 5min before scaling down (avoid flapping)
+      policies:
+        - type: Pods
+          value: 1                    # Remove max 1 pod at a time
+          periodSeconds: 120
+
