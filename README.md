@@ -1,4 +1,4 @@
-# DOKS SaaS Platform — Scalable Web Application on DigitalOcean Kubernetes
+# DOKS SaaS Platform: Scalable Web Application on DigitalOcean Kubernetes
 
 > **Case Study**: Deploying a scalable, highly available SaaS web application on DigitalOcean Kubernetes Service (DOKS) with load balancing, horizontal pod autoscaling, and cost optimisation.
 
